@@ -11,7 +11,14 @@ import json
 def main():
     link = sys.argv[1] if len(sys.argv) > 1 and url_valid(sys.argv[1]) else enter_url()
     additional_params = sys.argv[2] if len(sys.argv) > 2 else ""
-    params = ["google-chrome-stable"]
+
+    if sys.platform == "linux" or sys.platform == "linux2":
+        params = ["google-chrome-stable"]
+    elif sys.platform == "darwin":
+        params = ["/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"]
+    elif sys.platform == "win32":
+        params = ["C:/Program Files (x86)/Google/Chrome/Application/chrome.exe"]
+
     if "youtu.be/" in link:
         link = "https://www.youtube.com/embed/%s" % re.search(r"(?<=\.be/).*", link).group()
         link = re.sub(r"(&.+)$", '', link)
@@ -44,18 +51,22 @@ def main():
     if additional_params:
         params.append(additional_params)
     print(params)
-    return call(params)
+    call(params)
+    if sys.platform == "win32":
+        windows_aot(link)
+    return True
 
 
 def upgrade():
-    print("searching last version")
-    file_path = "%s/watch.py" % sys.path[0]
-    download_link = "https://raw.githubusercontent.com/dmmat/watch.py/master/watch.py"
-    print("downloading last version")
-    call(["wget", download_link, "-O", file_path])
-    print("seting file rules")
-    call(["chmod", "+x", file_path])
-    print("upgrading done")
+    if sys.platform == "linux" or sys.platform == "linux2":
+        print("searching last version")
+        file_path = "%s/watch.py" % sys.path[0]
+        download_link = "https://raw.githubusercontent.com/dmmat/watch.py/master/watch.py"
+        print("downloading last version")
+        call(["wget", download_link, "-O", file_path])
+        print("seting file rules")
+        call(["chmod", "+x", file_path])
+        print("upgrading done")
 
 
 def enter_url():
@@ -88,6 +99,21 @@ def http_get(url):
 
     res = conn.getresponse()
     return res.read().decode('utf-8')
+
+
+def windows_aot(url):
+    import win32gui
+    import win32con
+    raw_html = http_get(url)
+    match = re.search('<title>(.*?)</title>', raw_html)
+    title = match.group(1) if match else url.replace('http://', '').replace('https://', '')
+    print(title)
+    while True:
+        hwnd = win32gui.FindWindow(None, title)
+        if hwnd:
+            win32gui.SetWindowPos(hwnd, win32con.HWND_NOTOPMOST, 0, 0, 600, 400, 0)
+            win32gui.SetWindowPos(hwnd, win32con.HWND_TOPMOST, 0, 0, 600, 400, 0)
+            break
 
 
 def print_help():
